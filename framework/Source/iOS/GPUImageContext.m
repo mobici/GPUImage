@@ -214,7 +214,7 @@ static void *openGLESContextQueueKey;
 - (void)presentBufferForDisplay;
 {
     UIApplicationState state = [[UIApplication sharedApplication] applicationState];
-    if (state==UIApplicationStateInactive || state==UIApplicationStateBackground)
+    if (state==UIApplicationStateBackground)
     {
         return;
     }
