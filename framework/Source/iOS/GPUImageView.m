@@ -95,6 +95,12 @@
     self.enabled = YES;
     
     runSynchronouslyOnVideoProcessingQueue(^{
+        UIApplicationState state = [[UIApplication sharedApplication] applicationState];
+        if (state==UIApplicationStateBackground)
+        {
+            return;
+        }
+        
         [GPUImageContext useImageProcessingContext];
         
         displayProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImagePassthroughFragmentShaderString];
