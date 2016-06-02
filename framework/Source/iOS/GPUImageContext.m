@@ -1,6 +1,7 @@
 #import "GPUImageContext.h"
 #import <OpenGLES/EAGLDrawable.h>
 #import <AVFoundation/AVFoundation.h>
+#import <UIKit/UIKit.h>
 
 #define MAXSHADERPROGRAMSALLOWEDINCACHE 40
 
@@ -212,6 +213,11 @@ static void *openGLESContextQueueKey;
 
 - (void)presentBufferForDisplay;
 {
+    UIApplicationState state = [[UIApplication sharedApplication] applicationState];
+    if (state==UIApplicationStateInactive || state==UIApplicationStateBackground)
+    {
+        return;
+    }
     [self.context presentRenderbuffer:GL_RENDERBUFFER];
 }
 
