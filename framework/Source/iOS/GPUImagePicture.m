@@ -285,9 +285,11 @@
 // ARC forbids explicit message send of 'release'; since iOS 6 even for dispatch_release() calls: stripping it out in that case is required.
 - (void)dealloc;
 {
+#if 0 // MOB: The code below causes the frame buffer to live in a cache. We prefer to destroy it.
     [outputFramebuffer enableReferenceCounting];
     [outputFramebuffer unlock];
-
+#endif
+    
 #if !OS_OBJECT_USE_OBJC
     if (imageUpdateSemaphore != NULL)
     {
