@@ -248,8 +248,12 @@
     
     runSynchronouslyOnVideoProcessingQueue(^{
         [GPUImageContext useImageProcessingContext];
-        
+
+#if 1 // MOB: Disable caching for framebuffers used in GPUImagePicture
+        outputFramebuffer = [[GPUImageFramebuffer alloc] initWithSize:pixelSizeToUseForTexture];
+#else // Original code using frame buffer cache
         outputFramebuffer = [[GPUImageContext sharedFramebufferCache] fetchFramebufferForSize:pixelSizeToUseForTexture onlyTexture:YES];
+#endif
         [outputFramebuffer disableReferenceCounting];
 
         glBindTexture(GL_TEXTURE_2D, [outputFramebuffer texture]);
