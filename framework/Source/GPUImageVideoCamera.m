@@ -2,6 +2,8 @@
 #import "GPUImageMovieWriter.h"
 #import "GPUImageFilter.h"
 
+#define HANDLE_ORIENTATION_WITH_AV_CONNECTION 1
+
 void setColorConversion601( GLfloat conversionMatrix[9] )
 {
     kColorConversion601 = conversionMatrix;
@@ -981,6 +983,16 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         }
         else
         {
+#if HANDLE_ORIENTATION_WITH_AV_CONNECTION
+            self.videoCaptureConnection.videoOrientation = self.actualVideoOrientation;
+            
+            if ([self cameraPosition] == AVCaptureDevicePositionBack) {
+                // Rear camera won't mirror.
+                outputRotation = kGPUImageNoRotation;
+            } else {
+                outputRotation = self.horizontallyMirrorFrontFacingCamera ? kGPUImageFlipHorizonal : kGPUImageNoRotation;
+            }
+#else
             if ([self cameraPosition] == AVCaptureDevicePositionBack)
             {
                 if (_horizontallyMirrorRearFacingCamera)
@@ -1031,6 +1043,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
                     }
                 }
             }
+#endif
         }
         
         for (id<GPUImageInput> currentTarget in targets)
@@ -1039,6 +1052,30 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             [currentTarget setInputRotation:outputRotation atIndex:[[targetTextureIndices objectAtIndex:indexOfObject] integerValue]];
         }
     });
+}
+
+- (AVCaptureVideoOrientation)actualVideoOrientation {
+    AVCaptureVideoOrientation videoOrientation = AVCaptureVideoOrientationPortrait;
+    UIDeviceOrientation deviceOrientation = [[UIDevice currentDevice] orientation];
+    
+    switch (deviceOrientation) {
+        case UIDeviceOrientationLandscapeLeft:
+            videoOrientation = AVCaptureVideoOrientationLandscapeRight;
+            break;
+        case UIDeviceOrientationLandscapeRight:
+            videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+            break;
+        case UIDeviceOrientationPortrait:
+            videoOrientation = AVCaptureVideoOrientationPortrait;
+            break;
+        case UIDeviceOrientationPortraitUpsideDown:
+            videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+            break;
+        default:
+            videoOrientation = AVCaptureVideoOrientationPortrait;
+            break;
+    }
+    return videoOrientation;
 }
 
 - (void)setOutputImageOrientation:(UIInterfaceOrientation)newValue;
