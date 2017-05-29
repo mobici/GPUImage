@@ -872,6 +872,15 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
 {
+//    CMTime currentTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
+//    double seconds = CMTimeGetSeconds(currentTime);
+//    NSLog(@"didOutputSampleBuffer samplebuffer current time: %f", seconds);
+    
+    static NSInteger totalFrameCount = 0;
+    static NSInteger skipFrameCount = 0;
+    
+    totalFrameCount += 1;
+    
     if (!self.captureSession.isRunning)
     {
         return;
@@ -884,8 +893,12 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     {
         if (dispatch_semaphore_wait(frameRenderingSemaphore, DISPATCH_TIME_NOW) != 0)
         {
+            skipFrameCount += 1;
+//            NSLog(@"didOutputSampleBuffer EXITING samplebuffer current time: %f", seconds);
             return;
         }
+        
+        NSLog(@"skip frame ratio: %f", (double)skipFrameCount / totalFrameCount);
         
         CFRetain(sampleBuffer);
         runAsynchronouslyOnVideoProcessingQueue(^{
@@ -894,7 +907,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             {
                 [self.delegate willOutputSampleBuffer:sampleBuffer];
             }
-            
+//            NSLog(@"didOutputSampleBuffer samplebuffer current time: %f", seconds);
             [self processVideoSampleBuffer:sampleBuffer];
             
             CFRelease(sampleBuffer);
