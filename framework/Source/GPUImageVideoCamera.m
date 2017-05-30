@@ -41,6 +41,11 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     int imageBufferWidth, imageBufferHeight;
     
     BOOL addedAudioInputsDueToEncodingTarget;
+    
+#if LOG_SKIP_FRAME_RATIO
+    NSInteger totalFrameCounter;
+    NSInteger skipFrameCounter;
+#endif
 }
 
 - (void)updateOrientationSendToTargets;
@@ -91,6 +96,10 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     internalRotation = kGPUImageNoRotation;
     captureAsYUV = YES;
     _preferredConversion = kColorConversion709;
+    
+#if LOG_SKIP_FRAME_RATIO
+    [self resetSkipFrameRatio];
+#endif
     
 	// Grab the back-facing or front-facing camera
     _inputCamera = nil;
@@ -872,14 +881,9 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
 {
-//    CMTime currentTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
-//    double seconds = CMTimeGetSeconds(currentTime);
-//    NSLog(@"didOutputSampleBuffer samplebuffer current time: %f", seconds);
-    
-    static NSInteger totalFrameCount = 0;
-    static NSInteger skipFrameCount = 0;
-    
-    totalFrameCount += 1;
+#if LOG_SKIP_FRAME_RATIO
+    totalFrameCounter += 1;
+#endif
     
     if (!self.captureSession.isRunning)
     {
@@ -893,12 +897,15 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     {
         if (dispatch_semaphore_wait(frameRenderingSemaphore, DISPATCH_TIME_NOW) != 0)
         {
-            skipFrameCount += 1;
-//            NSLog(@"didOutputSampleBuffer EXITING samplebuffer current time: %f", seconds);
+#if LOG_SKIP_FRAME_RATIO
+            skipFrameCounter += 1;
+#endif
             return;
         }
         
-        NSLog(@"skip frame ratio: %f", (double)skipFrameCount / totalFrameCount);
+#if LOG_SKIP_FRAME_RATIO
+        NSLog(@"skip frame ratio: %f", (double)skipFrameCounter / totalFrameCounter);
+#endif
         
         CFRetain(sampleBuffer);
         runAsynchronouslyOnVideoProcessingQueue(^{
@@ -907,7 +914,6 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             {
                 [self.delegate willOutputSampleBuffer:sampleBuffer];
             }
-//            NSLog(@"didOutputSampleBuffer samplebuffer current time: %f", seconds);
             [self processVideoSampleBuffer:sampleBuffer];
             
             CFRelease(sampleBuffer);
@@ -915,6 +921,13 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         });
     }
 }
+
+#if LOG_SKIP_FRAME_RATIO
+- (void)resetSkipFrameRatio {
+    totalFrameCounter = 0;
+    skipFrameCounter = 0;
+}
+#endif
 
 #pragma mark -
 #pragma mark Accessors

@@ -5,6 +5,8 @@
 #import "GPUImageOutput.h"
 #import "GPUImageColorConversion.h"
 
+#define LOG_SKIP_FRAME_RATIO 0
+
 //Optionally override the YUV to RGB matrices
 void setColorConversion601( GLfloat conversionMatrix[9] );
 void setColorConversion601FullRange( GLfloat conversionMatrix[9] );
@@ -152,5 +154,9 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
 
 + (BOOL)isBackFacingCameraPresent;
 + (BOOL)isFrontFacingCameraPresent;
+
+#if LOG_SKIP_FRAME_RATIO
+- (void)resetSkipFrameRatio;
+#endif
 
 @end
