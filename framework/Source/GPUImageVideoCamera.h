@@ -155,8 +155,6 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
 + (BOOL)isBackFacingCameraPresent;
 + (BOOL)isFrontFacingCameraPresent;
 
-#if LOG_SKIP_FRAME_RATIO
 - (void)resetSkipFrameRatio;
-#endif
 
 @end

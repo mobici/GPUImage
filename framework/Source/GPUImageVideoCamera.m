@@ -97,9 +97,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     captureAsYUV = YES;
     _preferredConversion = kColorConversion709;
     
-#if LOG_SKIP_FRAME_RATIO
     [self resetSkipFrameRatio];
-#endif
     
 	// Grab the back-facing or front-facing camera
     _inputCamera = nil;
@@ -922,12 +920,12 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     }
 }
 
-#if LOG_SKIP_FRAME_RATIO
 - (void)resetSkipFrameRatio {
+#if LOG_SKIP_FRAME_RATIO
     totalFrameCounter = 0;
     skipFrameCounter = 0;
-}
 #endif
+}
 
 #pragma mark -
 #pragma mark Accessors
