@@ -988,9 +988,44 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             
             if ([self cameraPosition] == AVCaptureDevicePositionBack) {
                 // Rear camera won't mirror.
-                outputRotation = kGPUImageNoRotation;
-            } else {
-                outputRotation = self.horizontallyMirrorFrontFacingCamera ? kGPUImageFlipHorizonal : kGPUImageNoRotation;
+                
+                switch (self.actualVideoOrientation) {
+                    case UIInterfaceOrientationPortrait: {
+                        outputRotation = kGPUImageNoRotation;
+                        break;
+                    }
+                    case UIInterfaceOrientationPortraitUpsideDown: {
+                        outputRotation = kGPUImageFlipVertical;
+                        break;
+                    }
+                    case UIInterfaceOrientationLandscapeLeft: {
+                        outputRotation = kGPUImageRotateLeft;
+                        break;
+                    }
+                    case UIInterfaceOrientationLandscapeRight: {
+                        outputRotation = kGPUImageRotateRight;
+                        break;
+                    }
+                }
+            } else { // Front camera.
+                switch (self.actualVideoOrientation) {
+                    case UIInterfaceOrientationPortrait: {
+                        outputRotation = self.horizontallyMirrorFrontFacingCamera ? kGPUImageFlipHorizonal : kGPUImageNoRotation;
+                        break;
+                    }
+                    case UIInterfaceOrientationPortraitUpsideDown: {
+                        outputRotation = kGPUImageFlipVertical;
+                        break;
+                    }
+                    case UIInterfaceOrientationLandscapeLeft: {
+                        outputRotation = kGPUImageRotateRightFlipVertical;
+                        break;
+                    }
+                    case UIInterfaceOrientationLandscapeRight: {
+                        outputRotation = kGPUImageRotateRightFlipHorizontal;
+                        break;
+                    }
+                }
             }
 #else
             if ([self cameraPosition] == AVCaptureDevicePositionBack)
