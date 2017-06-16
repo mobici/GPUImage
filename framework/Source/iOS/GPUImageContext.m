@@ -46,6 +46,22 @@ static void *openGLESContextQueueKey;
     return self;
 }
 
+- (void)useMainThreadAsContextQueue
+{
+    _contextQueue = dispatch_get_main_queue();
+#if OS_OBJECT_USE_OBJC
+    dispatch_queue_set_specific(_contextQueue, openGLESContextQueueKey, (__bridge void *)self, NULL);
+#endif
+}
+
+- (void)useNonMainThreadAsContextQueue
+{
+    _contextQueue = dispatch_queue_create("com.sunsetlakesoftware.GPUImage.openGLESContextQueue", GPUImageDefaultQueueAttribute());    
+#if OS_OBJECT_USE_OBJC
+    dispatch_queue_set_specific(_contextQueue, openGLESContextQueueKey, (__bridge void *)self, NULL);
+#endif
+}
+
 + (void *)contextKey {
 	return openGLESContextQueueKey;
 }

@@ -39,6 +39,9 @@ typedef NS_ENUM(NSUInteger, GPUImageRotationMode) {
 + (BOOL)deviceSupportsFramebufferReads;
 + (CGSize)sizeThatFitsWithinATextureForSize:(CGSize)inputSize;
 
+- (void)useMainThreadAsContextQueue;
+- (void)useNonMainThreadAsContextQueue;
+
 - (void)presentBufferForDisplay;
 - (GLProgram *)programForVertexShaderString:(NSString *)vertexShaderString fragmentShaderString:(NSString *)fragmentShaderString;
 
