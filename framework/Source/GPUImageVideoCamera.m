@@ -468,6 +468,20 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 
 - (void)setFrameRate:(int32_t)frameRate;
 {
+    // Check if fps is supported.
+    BOOL isFPSSupported = false;
+    for (AVFrameRateRange *range in _inputCamera.activeFormat.videoSupportedFrameRateRanges) {
+        if (range.maxFrameRate >= frameRate && range.minFrameRate <= frameRate) {
+            isFPSSupported = true;
+            break;
+        }
+    }
+    
+    if (!isFPSSupported) {
+        // FPS is not supported, set fps to default.
+        _frameRate = 0;
+    }
+    
 	_frameRate = frameRate;
 	
 	if (_frameRate > 0)
