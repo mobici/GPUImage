@@ -378,6 +378,14 @@
 - (void)newFrameReadyAtTime:(CMTime)frameTime atIndex:(NSInteger)textureIndex;
 {
     runSynchronouslyOnVideoProcessingQueue(^{
+        // Prevent new frame processing when app state is background.
+        UIApplicationState state = [[UIApplication sharedApplication] applicationState];
+        if (state == UIApplicationStateInactive || state == UIApplicationStateBackground) {
+            [inputFramebufferForDisplay unlock];
+            inputFramebufferForDisplay = nil;
+            return;
+        }
+        
         [GPUImageContext setActiveShaderProgram:displayProgram];
         [self setDisplayFramebuffer];
         
