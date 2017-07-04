@@ -230,8 +230,7 @@ static void *openGLESContextQueueKey;
 - (void)presentBufferForDisplay;
 {
     UIApplicationState state = [[UIApplication sharedApplication] applicationState];
-    if (state==UIApplicationStateBackground)
-    {
+    if (state == UIApplicationStateInactive || state==UIApplicationStateBackground ) {
         return;
     }
     [self.context presentRenderbuffer:GL_RENDERBUFFER];
