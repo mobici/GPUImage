@@ -247,6 +247,7 @@ void reportAvailableMemoryForGPUImage(NSString *tag)
     cachedMaximumOutputSize = CGSizeZero;
     
     NSInteger indexOfObject = [targets indexOfObject:targetToRemove];
+    if (indexOfObject == NSNotFound) { return; }
     NSInteger textureIndexOfTarget = [[targetTextureIndices objectAtIndex:indexOfObject] integerValue];
 
     runSynchronouslyOnVideoProcessingQueue(^{
