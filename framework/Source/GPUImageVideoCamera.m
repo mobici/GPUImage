@@ -902,14 +902,21 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         }
         
         CFRetain(sampleBuffer);
+        
+        __unsafe_unretained typeof(self) weakSelf = self;
+        
         runAsynchronouslyOnVideoProcessingQueue(^{
-            //Feature Detection Hook.
-            if (self.delegate)
-            {
-                [self.delegate willOutputSampleBuffer:sampleBuffer];
+            if (!weakSelf.captureSession.isRunning) {
+                CFRelease(sampleBuffer);
+                return;
             }
             
-            [self processVideoSampleBuffer:sampleBuffer];
+            //Feature Detection Hook.
+            if (weakSelf.delegate) {
+                [weakSelf.delegate willOutputSampleBuffer:sampleBuffer];
+            }
+            
+            [weakSelf processVideoSampleBuffer:sampleBuffer];
             
             CFRelease(sampleBuffer);
             dispatch_semaphore_signal(frameRenderingSemaphore);
