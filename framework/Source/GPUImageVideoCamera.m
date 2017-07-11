@@ -908,6 +908,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         runAsynchronouslyOnVideoProcessingQueue(^{
             if (!weakSelf.captureSession.isRunning) {
                 CFRelease(sampleBuffer);
+                dispatch_semaphore_signal(frameRenderingSemaphore);
                 return;
             }
             
