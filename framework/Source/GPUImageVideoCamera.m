@@ -477,15 +477,10 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         }
     }
     
-    if (!isFPSSupported) {
-        // FPS is not supported, set fps to default.
-        _frameRate = 0;
-    }
-    
-	_frameRate = frameRate;
+    // Check whether fps is supported. If not, set to default (0).
+    _frameRate = isFPSSupported ? frameRate : 0;
 	
-	if (_frameRate > 0)
-	{
+	if (_frameRate > 0) {
 		if ([_inputCamera respondsToSelector:@selector(setActiveVideoMinFrameDuration:)] &&
             [_inputCamera respondsToSelector:@selector(setActiveVideoMaxFrameDuration:)]) {
             
@@ -515,8 +510,8 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         }
         
 	}
-	else
-	{
+    // Frame rate is not greater than zero.
+	else {
 		if ([_inputCamera respondsToSelector:@selector(setActiveVideoMinFrameDuration:)] &&
             [_inputCamera respondsToSelector:@selector(setActiveVideoMaxFrameDuration:)]) {
             
@@ -544,7 +539,6 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 #pragma clang diagnostic pop
             }
         }
-        
 	}
 }
 
