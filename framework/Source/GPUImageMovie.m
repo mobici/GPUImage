@@ -325,7 +325,7 @@
         if (strongSelf == nil) { return; }
         
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
-        strongSelf->displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
+        strongSelf->displayLink = [CADisplayLink displayLinkWithTarget:weakSelf selector:@selector(displayLinkCallback:)];
         [strongSelf->displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
         [strongSelf->displayLink setPaused:YES];
 #else
@@ -338,7 +338,7 @@
             NSLog(@"DisplayLink created with error:%d", error);
             displayLink = NULL;
         }
-        CVDisplayLinkSetOutputCallback(displayLink, renderCallback, (__bridge void *)self);
+        CVDisplayLinkSetOutputCallback(displayLink, renderCallback, (__bridge void *)weakSelf);
         CVDisplayLinkStop(displayLink);
 #endif
 
@@ -351,7 +351,7 @@
             [pixBuffAttributes setObject:@(kCVPixelFormatType_32BGRA) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
         }
         strongSelf->playerItemOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:pixBuffAttributes];
-        [strongSelf->playerItemOutput setDelegate:self queue:videoProcessingQueue];
+        [strongSelf->playerItemOutput setDelegate:weakSelf queue:videoProcessingQueue];
 
         [strongSelf->_playerItem addOutput:strongSelf->playerItemOutput];
         [strongSelf->playerItemOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:0.1];
@@ -409,15 +409,19 @@ static CVReturn renderCallback(CVDisplayLinkRef displayLink,
 #endif
 
 - (void)processPixelBufferAtTime:(CMTime)outputItemTime {
-    if ([playerItemOutput hasNewPixelBufferForItemTime:outputItemTime]) {
-        __unsafe_unretained GPUImageMovie *weakSelf = self;
-        CVPixelBufferRef pixelBuffer = [playerItemOutput copyPixelBufferForItemTime:outputItemTime itemTimeForDisplay:NULL];
-        if( pixelBuffer )
-            runSynchronouslyOnVideoProcessingQueue(^{
+    __weak typeof(self) weakSelf = self;
+    
+    runSynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
+        
+        if ([strongSelf->playerItemOutput hasNewPixelBufferForItemTime:outputItemTime]) {
+            CVPixelBufferRef pixelBuffer = [strongSelf->playerItemOutput copyPixelBufferForItemTime:outputItemTime itemTimeForDisplay:NULL];
+            if( pixelBuffer )
                 [weakSelf processMovieFrame:pixelBuffer withSampleTime:outputItemTime];
-                CFRelease(pixelBuffer);
-            });
-    }
+            CFRelease(pixelBuffer);
+        }
+    });
 }
 
 - (BOOL)readNextVideoFrameFromOutput:(AVAssetReaderOutput *)readerVideoTrackOutput;
@@ -447,7 +451,7 @@ static CVReturn renderCallback(CVDisplayLinkRef displayLink,
                 previousActualFrameTime = CFAbsoluteTimeGetCurrent();
             }
 
-            __unsafe_unretained GPUImageMovie *weakSelf = self;
+            __weak typeof(self) weakSelf = self;
             runSynchronouslyOnVideoProcessingQueue(^{
                 [weakSelf processMovieFrame:sampleBufferRef];
                 CMSampleBufferInvalidate(sampleBufferRef);

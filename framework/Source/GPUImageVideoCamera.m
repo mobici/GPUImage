@@ -963,10 +963,10 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
                     {
                         case UIInterfaceOrientationPortrait:
                             strongSelf->internalRotation = kGPUImageRotateRightFlipVertical; break;
-                        case UIInterfaceOrientationPortraitUpsideDown:strongSelf->
-                            internalRotation = kGPUImageRotate180; break;
-                        case UIInterfaceOrientationLandscapeLeft:strongSelf->
-                            internalRotation = kGPUImageFlipHorizonal; break;
+                        case UIInterfaceOrientationPortraitUpsideDown:
+                            strongSelf->internalRotation = kGPUImageRotate180; break;
+                        case UIInterfaceOrientationLandscapeLeft:
+                            strongSelf->internalRotation = kGPUImageFlipHorizonal; break;
                         case UIInterfaceOrientationLandscapeRight:
                             strongSelf->internalRotation = kGPUImageFlipVertical; break;
                         default:

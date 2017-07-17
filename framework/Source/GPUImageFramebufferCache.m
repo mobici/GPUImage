@@ -102,7 +102,7 @@
             NSInteger currentTextureID = (numberOfMatchingTextures - 1);
             while ((framebufferFromCache == nil) && (currentTextureID >= 0))
             {
-                NSString *textureHash = [NSString stringWithFormat:@"%@-%ld", lookupHash, (long)currentTextureID];
+                NSString *textureHash = [NSString stringWithFormat:@"%@-%zd", lookupHash, currentTextureID];
                 framebufferFromCache = [strongSelf->framebufferCache objectForKey:textureHash];
                 // Test the values in the cache first, to see if they got invalidated behind our back
                 if (framebufferFromCache != nil)

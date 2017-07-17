@@ -155,11 +155,8 @@
     }
 }
 
-- (void)dealloc
-{
-    runSynchronouslyOnVideoProcessingQueue(^{
-        [self destroyDisplayFramebuffer];
-    });
+- (void)dealloc {
+    [self destroyDisplayFramebuffer];
 }
 
 #pragma mark -
@@ -250,12 +247,12 @@
         
         CGFloat heightScaling, widthScaling;
         
-        CGSize currentViewSize = self.bounds.size;
+        CGSize currentViewSize = weakSelf.bounds.size;
         
         //    CGFloat imageAspectRatio = inputImageSize.width / inputImageSize.height;
         //    CGFloat viewAspectRatio = currentViewSize.width / currentViewSize.height;
         
-        CGRect insetRect = AVMakeRectWithAspectRatioInsideRect(strongSelf->inputImageSize, self.bounds);
+        CGRect insetRect = AVMakeRectWithAspectRatioInsideRect(strongSelf->inputImageSize, weakSelf.bounds);
         
         switch(strongSelf->_fillMode)
         {
