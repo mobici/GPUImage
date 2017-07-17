@@ -246,25 +246,30 @@
     //
     //    NSLog(@"Debug, average input image red: %f, green: %f, blue: %f, alpha: %f", currentRedTotal / (CGFloat)totalNumberOfPixels, currentGreenTotal / (CGFloat)totalNumberOfPixels, currentBlueTotal / (CGFloat)totalNumberOfPixels, currentAlphaTotal / (CGFloat)totalNumberOfPixels);
     
+    __weak typeof(self) weakSelf = self;
+    
     runSynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
+        
         [GPUImageContext useImageProcessingContext];
 
 #if 1 // MOB: Disable caching for framebuffers used in GPUImagePicture
-        outputFramebuffer = [[GPUImageFramebuffer alloc] initWithSize:pixelSizeToUseForTexture];
+        strongSelf->outputFramebuffer = [[GPUImageFramebuffer alloc] initWithSize:pixelSizeToUseForTexture];
 #else // Original code using frame buffer cache
         outputFramebuffer = [[GPUImageContext sharedFramebufferCache] fetchFramebufferForSize:pixelSizeToUseForTexture onlyTexture:YES];
 #endif
-        [outputFramebuffer disableReferenceCounting];
+        [strongSelf->outputFramebuffer disableReferenceCounting];
 
-        glBindTexture(GL_TEXTURE_2D, [outputFramebuffer texture]);
-        if (self.shouldSmoothlyScaleOutput)
+        glBindTexture(GL_TEXTURE_2D, [strongSelf->outputFramebuffer texture]);
+        if (weakSelf.shouldSmoothlyScaleOutput)
         {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         }
         // no need to use self.outputTextureOptions here since pictures need this texture formats and type
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)pixelSizeToUseForTexture.width, (int)pixelSizeToUseForTexture.height, 0, format, GL_UNSIGNED_BYTE, imageData);
         
-        if (self.shouldSmoothlyScaleOutput)
+        if (weakSelf.shouldSmoothlyScaleOutput)
         {
             glGenerateMipmap(GL_TEXTURE_2D);
         }
@@ -327,19 +332,27 @@
         return NO;
     }
     
-    runAsynchronouslyOnVideoProcessingQueue(^{        
-        for (id<GPUImageInput> currentTarget in targets)
+    __weak typeof(self) weakSelf = self;
+    
+    runAsynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            if (completion != nil) { completion(); }
+            return;
+        }
+        
+        for (id<GPUImageInput> currentTarget in strongSelf->targets)
         {
-            NSInteger indexOfObject = [targets indexOfObject:currentTarget];
-            NSInteger textureIndexOfTarget = [[targetTextureIndices objectAtIndex:indexOfObject] integerValue];
+            NSInteger indexOfObject = [strongSelf->targets indexOfObject:currentTarget];
+            NSInteger textureIndexOfTarget = [[strongSelf->targetTextureIndices objectAtIndex:indexOfObject] integerValue];
             
             [currentTarget setCurrentlyReceivingMonochromeInput:NO];
-            [currentTarget setInputSize:pixelSizeOfImage atIndex:textureIndexOfTarget];
-            [currentTarget setInputFramebuffer:outputFramebuffer atIndex:textureIndexOfTarget];
+            [currentTarget setInputSize:strongSelf->pixelSizeOfImage atIndex:textureIndexOfTarget];
+            [currentTarget setInputFramebuffer:strongSelf->outputFramebuffer atIndex:textureIndexOfTarget];
             [currentTarget newFrameReadyAtTime:kCMTimeIndefinite atIndex:textureIndexOfTarget];
         }
         
-        dispatch_semaphore_signal(imageUpdateSemaphore);
+        dispatch_semaphore_signal(strongSelf->imageUpdateSemaphore);
         
         if (completion != nil) {
             completion();

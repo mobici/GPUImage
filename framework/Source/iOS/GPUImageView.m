@@ -94,45 +94,48 @@
 
     self.enabled = YES;
     
+    __weak typeof(self) weakSelf = self;
     runSynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
+        
         UIApplicationState state = [[UIApplication sharedApplication] applicationState];
-        if (state==UIApplicationStateBackground)
-        {
+        if (state == UIApplicationStateBackground || state == UIApplicationStateInactive) {
             return;
         }
         
         [GPUImageContext useImageProcessingContext];
         
-        displayProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImagePassthroughFragmentShaderString];
-        if (!displayProgram.initialized)
+        strongSelf->displayProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImagePassthroughFragmentShaderString];
+        if (!strongSelf->displayProgram.initialized)
         {
-            [displayProgram addAttribute:@"position"];
-            [displayProgram addAttribute:@"inputTextureCoordinate"];
+            [strongSelf->displayProgram addAttribute:@"position"];
+            [strongSelf->displayProgram addAttribute:@"inputTextureCoordinate"];
             
-            if (![displayProgram link])
+            if (![strongSelf->displayProgram link])
             {
-                NSString *progLog = [displayProgram programLog];
+                NSString *progLog = [strongSelf->displayProgram programLog];
                 NSLog(@"Program link log: %@", progLog);
-                NSString *fragLog = [displayProgram fragmentShaderLog];
+                NSString *fragLog = [strongSelf->displayProgram fragmentShaderLog];
                 NSLog(@"Fragment shader compile log: %@", fragLog);
-                NSString *vertLog = [displayProgram vertexShaderLog];
+                NSString *vertLog = [strongSelf->displayProgram vertexShaderLog];
                 NSLog(@"Vertex shader compile log: %@", vertLog);
-                displayProgram = nil;
+                strongSelf->displayProgram = nil;
                 NSAssert(NO, @"Filter shader link failed");
             }
         }
         
-        displayPositionAttribute = [displayProgram attributeIndex:@"position"];
-        displayTextureCoordinateAttribute = [displayProgram attributeIndex:@"inputTextureCoordinate"];
-        displayInputTextureUniform = [displayProgram uniformIndex:@"inputImageTexture"]; // This does assume a name of "inputTexture" for the fragment shader
+        strongSelf->displayPositionAttribute = [strongSelf->displayProgram attributeIndex:@"position"];
+        strongSelf->displayTextureCoordinateAttribute = [strongSelf->displayProgram attributeIndex:@"inputTextureCoordinate"];
+        strongSelf->displayInputTextureUniform = [strongSelf->displayProgram uniformIndex:@"inputImageTexture"]; // This does assume a name of "inputTexture" for the fragment shader
 
-        [GPUImageContext setActiveShaderProgram:displayProgram];
-        glEnableVertexAttribArray(displayPositionAttribute);
-        glEnableVertexAttribArray(displayTextureCoordinateAttribute);
+        [GPUImageContext setActiveShaderProgram:strongSelf->displayProgram];
+        glEnableVertexAttribArray(strongSelf->displayPositionAttribute);
+        glEnableVertexAttribArray(strongSelf->displayTextureCoordinateAttribute);
         
-        [self setBackgroundColorRed:0.0 green:0.0 blue:0.0 alpha:1.0];
-        _fillMode = kGPUImageFillModePreserveAspectRatio;
-        [self createDisplayFramebuffer];
+        [weakSelf setBackgroundColorRed:0.0 green:0.0 blue:0.0 alpha:1.0];
+        strongSelf->_fillMode = kGPUImageFillModePreserveAspectRatio;
+        [weakSelf createDisplayFramebuffer];
     });
 }
 
@@ -142,9 +145,10 @@
     // The frame buffer needs to be trashed and re-created when the view size changes.
     if (!CGSizeEqualToSize(self.bounds.size, boundsSizeAtFrameBufferEpoch) &&
         !CGSizeEqualToSize(self.bounds.size, CGSizeZero)) {
+        __weak typeof(self) weakSelf = self;
         runSynchronouslyOnVideoProcessingQueue(^{
-            [self destroyDisplayFramebuffer];
-            [self createDisplayFramebuffer];
+            [weakSelf destroyDisplayFramebuffer];
+            [weakSelf createDisplayFramebuffer];
         });
     } else if (!CGSizeEqualToSize(self.bounds.size, CGSizeZero)) {
         [self recalculateViewGeometry];
@@ -238,7 +242,12 @@
 
 - (void)recalculateViewGeometry;
 {
+    __weak typeof(self) weakSelf = self;
+    
     runSynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
+        
         CGFloat heightScaling, widthScaling;
         
         CGSize currentViewSize = self.bounds.size;
@@ -246,9 +255,9 @@
         //    CGFloat imageAspectRatio = inputImageSize.width / inputImageSize.height;
         //    CGFloat viewAspectRatio = currentViewSize.width / currentViewSize.height;
         
-        CGRect insetRect = AVMakeRectWithAspectRatioInsideRect(inputImageSize, self.bounds);
+        CGRect insetRect = AVMakeRectWithAspectRatioInsideRect(strongSelf->inputImageSize, self.bounds);
         
-        switch(_fillMode)
+        switch(strongSelf->_fillMode)
         {
             case kGPUImageFillModeStretch:
             {
@@ -268,14 +277,14 @@
             }; break;
         }
         
-        imageVertices[0] = -widthScaling;
-        imageVertices[1] = -heightScaling;
-        imageVertices[2] = widthScaling;
-        imageVertices[3] = -heightScaling;
-        imageVertices[4] = -widthScaling;
-        imageVertices[5] = heightScaling;
-        imageVertices[6] = widthScaling;
-        imageVertices[7] = heightScaling;
+        strongSelf->imageVertices[0] = -widthScaling;
+        strongSelf->imageVertices[1] = -heightScaling;
+        strongSelf->imageVertices[2] = widthScaling;
+        strongSelf->imageVertices[3] = -heightScaling;
+        strongSelf->imageVertices[4] = -widthScaling;
+        strongSelf->imageVertices[5] = heightScaling;
+        strongSelf->imageVertices[6] = widthScaling;
+        strongSelf->imageVertices[7] = heightScaling;
     });
     
 //    static const GLfloat imageVertices[] = {
@@ -377,33 +386,38 @@
 
 - (void)newFrameReadyAtTime:(CMTime)frameTime atIndex:(NSInteger)textureIndex;
 {
+    __weak typeof(self) weakSelf = self;
+    
     runSynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
+        
         // Prevent new frame processing when app state is background.
         UIApplicationState state = [[UIApplication sharedApplication] applicationState];
         if (state == UIApplicationStateInactive || state == UIApplicationStateBackground) {
-            [inputFramebufferForDisplay unlock];
-            inputFramebufferForDisplay = nil;
+            [strongSelf->inputFramebufferForDisplay unlock];
+            strongSelf->inputFramebufferForDisplay = nil;
             return;
         }
         
-        [GPUImageContext setActiveShaderProgram:displayProgram];
-        [self setDisplayFramebuffer];
+        [GPUImageContext setActiveShaderProgram:strongSelf->displayProgram];
+        [weakSelf setDisplayFramebuffer];
         
-        glClearColor(backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha);
+        glClearColor(strongSelf->backgroundColorRed, strongSelf->backgroundColorGreen, strongSelf->backgroundColorBlue, strongSelf->backgroundColorAlpha);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, [inputFramebufferForDisplay texture]);
-        glUniform1i(displayInputTextureUniform, 4);
+        glBindTexture(GL_TEXTURE_2D, [strongSelf->inputFramebufferForDisplay texture]);
+        glUniform1i(strongSelf->displayInputTextureUniform, 4);
         
-        glVertexAttribPointer(displayPositionAttribute, 2, GL_FLOAT, 0, 0, imageVertices);
-        glVertexAttribPointer(displayTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, [GPUImageView textureCoordinatesForRotation:inputRotation]);
+        glVertexAttribPointer(strongSelf->displayPositionAttribute, 2, GL_FLOAT, 0, 0, strongSelf->imageVertices);
+        glVertexAttribPointer(strongSelf->displayTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, [GPUImageView textureCoordinatesForRotation:strongSelf->inputRotation]);
         
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         
-        [self presentFramebuffer];
-        [inputFramebufferForDisplay unlock];
-        inputFramebufferForDisplay = nil;
+        [weakSelf presentFramebuffer];
+        [strongSelf->inputFramebufferForDisplay unlock];
+        strongSelf->inputFramebufferForDisplay = nil;
     });
 }
 
@@ -425,19 +439,24 @@
 
 - (void)setInputSize:(CGSize)newSize atIndex:(NSInteger)textureIndex;
 {
+    __weak typeof(self) weakSelf = self;
+    
     runSynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
+        
         CGSize rotatedSize = newSize;
         
-        if (GPUImageRotationSwapsWidthAndHeight(inputRotation))
+        if (GPUImageRotationSwapsWidthAndHeight(strongSelf->inputRotation))
         {
             rotatedSize.width = newSize.height;
             rotatedSize.height = newSize.width;
         }
         
-        if (!CGSizeEqualToSize(inputImageSize, rotatedSize))
+        if (!CGSizeEqualToSize(strongSelf->inputImageSize, rotatedSize))
         {
-            inputImageSize = rotatedSize;
-            [self recalculateViewGeometry];
+            strongSelf->inputImageSize = rotatedSize;
+            [weakSelf recalculateViewGeometry];
         }
     });
 }

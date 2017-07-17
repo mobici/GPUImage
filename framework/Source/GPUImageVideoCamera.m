@@ -153,9 +153,12 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         [videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt:kCVPixelFormatType_32BGRA] forKey:(id)kCVPixelBufferPixelFormatTypeKey]];
     }
     
+    __weak typeof(self) weakSelf = self;
     runSynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
         
-        if (captureAsYUV)
+        if (strongSelf->captureAsYUV)
         {
             [GPUImageContext useImageProcessingContext];
             //            if ([GPUImageContext deviceSupportsRedTextures])
@@ -164,45 +167,45 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             //            }
             //            else
             //            {
-            if (isFullYUVRange)
+            if (strongSelf->isFullYUVRange)
             {
-                yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImageYUVFullRangeConversionForLAFragmentShaderString];
+                strongSelf->yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImageYUVFullRangeConversionForLAFragmentShaderString];
             }
             else
             {
-                yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImageYUVVideoRangeConversionForLAFragmentShaderString];
+                strongSelf->yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImageYUVVideoRangeConversionForLAFragmentShaderString];
             }
 
             //            }
             
-            if (!yuvConversionProgram.initialized)
+            if (!strongSelf->yuvConversionProgram.initialized)
             {
-                [yuvConversionProgram addAttribute:@"position"];
-                [yuvConversionProgram addAttribute:@"inputTextureCoordinate"];
+                [strongSelf->yuvConversionProgram addAttribute:@"position"];
+                [strongSelf->yuvConversionProgram addAttribute:@"inputTextureCoordinate"];
                 
-                if (![yuvConversionProgram link])
+                if (![strongSelf->yuvConversionProgram link])
                 {
-                    NSString *progLog = [yuvConversionProgram programLog];
+                    NSString *progLog = [strongSelf->yuvConversionProgram programLog];
                     NSLog(@"Program link log: %@", progLog);
-                    NSString *fragLog = [yuvConversionProgram fragmentShaderLog];
+                    NSString *fragLog = [strongSelf->yuvConversionProgram fragmentShaderLog];
                     NSLog(@"Fragment shader compile log: %@", fragLog);
-                    NSString *vertLog = [yuvConversionProgram vertexShaderLog];
+                    NSString *vertLog = [strongSelf->yuvConversionProgram vertexShaderLog];
                     NSLog(@"Vertex shader compile log: %@", vertLog);
-                    yuvConversionProgram = nil;
+                    strongSelf->yuvConversionProgram = nil;
                     NSAssert(NO, @"Filter shader link failed");
                 }
             }
             
-            yuvConversionPositionAttribute = [yuvConversionProgram attributeIndex:@"position"];
-            yuvConversionTextureCoordinateAttribute = [yuvConversionProgram attributeIndex:@"inputTextureCoordinate"];
-            yuvConversionLuminanceTextureUniform = [yuvConversionProgram uniformIndex:@"luminanceTexture"];
-            yuvConversionChrominanceTextureUniform = [yuvConversionProgram uniformIndex:@"chrominanceTexture"];
-            yuvConversionMatrixUniform = [yuvConversionProgram uniformIndex:@"colorConversionMatrix"];
+            strongSelf->yuvConversionPositionAttribute = [strongSelf->yuvConversionProgram attributeIndex:@"position"];
+            strongSelf->yuvConversionTextureCoordinateAttribute = [strongSelf->yuvConversionProgram attributeIndex:@"inputTextureCoordinate"];
+            strongSelf->yuvConversionLuminanceTextureUniform = [strongSelf->yuvConversionProgram uniformIndex:@"luminanceTexture"];
+            strongSelf->yuvConversionChrominanceTextureUniform = [strongSelf->yuvConversionProgram uniformIndex:@"chrominanceTexture"];
+            strongSelf->yuvConversionMatrixUniform = [strongSelf->yuvConversionProgram uniformIndex:@"colorConversionMatrix"];
             
-            [GPUImageContext setActiveShaderProgram:yuvConversionProgram];
+            [GPUImageContext setActiveShaderProgram:strongSelf->yuvConversionProgram];
             
-            glEnableVertexAttribArray(yuvConversionPositionAttribute);
-            glEnableVertexAttribArray(yuvConversionTextureCoordinateAttribute);
+            glEnableVertexAttribArray(strongSelf->yuvConversionPositionAttribute);
+            glEnableVertexAttribArray(strongSelf->yuvConversionTextureCoordinateAttribute);
         }
     });
     
@@ -897,12 +900,15 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         
         CFRetain(sampleBuffer);
         
-        __unsafe_unretained typeof(self) weakSelf = self;
+        __weak typeof(self) weakSelf = self;
         
         runAsynchronouslyOnVideoProcessingQueue(^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf == nil) { return; }
+            
             if (!weakSelf.captureSession.isRunning) {
                 CFRelease(sampleBuffer);
-                dispatch_semaphore_signal(frameRenderingSemaphore);
+                dispatch_semaphore_signal(strongSelf->frameRenderingSemaphore);
                 return;
             }
             
@@ -914,7 +920,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             [weakSelf processVideoSampleBuffer:sampleBuffer];
             
             CFRelease(sampleBuffer);
-            dispatch_semaphore_signal(frameRenderingSemaphore);
+            dispatch_semaphore_signal(strongSelf->frameRenderingSemaphore);
         });
     }
 }
@@ -938,61 +944,84 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 
 - (void)updateOrientationSendToTargets;
 {
+    __weak typeof(self) weakSelf = self;
+    
     runSynchronouslyOnVideoProcessingQueue(^{
-        
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
         //    From the iOS 5.0 release notes:
         //    In previous iOS versions, the front-facing camera would always deliver buffers in AVCaptureVideoOrientationLandscapeLeft and the back-facing camera would always deliver buffers in AVCaptureVideoOrientationLandscapeRight.
         
-        if (captureAsYUV && [GPUImageContext supportsFastTextureUpload])
+        if (strongSelf->captureAsYUV && [GPUImageContext supportsFastTextureUpload])
         {
-            outputRotation = kGPUImageNoRotation;
-            if ([self cameraPosition] == AVCaptureDevicePositionBack)
+            strongSelf->outputRotation = kGPUImageNoRotation;
+            if ([weakSelf cameraPosition] == AVCaptureDevicePositionBack)
             {
-                if (_horizontallyMirrorRearFacingCamera)
+                if (strongSelf->_horizontallyMirrorRearFacingCamera)
                 {
-                    switch(_outputImageOrientation)
+                    switch(strongSelf->_outputImageOrientation)
                     {
-                        case UIInterfaceOrientationPortrait:internalRotation = kGPUImageRotateRightFlipVertical; break;
-                        case UIInterfaceOrientationPortraitUpsideDown:internalRotation = kGPUImageRotate180; break;
-                        case UIInterfaceOrientationLandscapeLeft:internalRotation = kGPUImageFlipHorizonal; break;
-                        case UIInterfaceOrientationLandscapeRight:internalRotation = kGPUImageFlipVertical; break;
-                        default:internalRotation = kGPUImageNoRotation;
+                        case UIInterfaceOrientationPortrait:
+                            strongSelf->internalRotation = kGPUImageRotateRightFlipVertical; break;
+                        case UIInterfaceOrientationPortraitUpsideDown:strongSelf->
+                            internalRotation = kGPUImageRotate180; break;
+                        case UIInterfaceOrientationLandscapeLeft:strongSelf->
+                            internalRotation = kGPUImageFlipHorizonal; break;
+                        case UIInterfaceOrientationLandscapeRight:
+                            strongSelf->internalRotation = kGPUImageFlipVertical; break;
+                        default:
+                            strongSelf->internalRotation = kGPUImageNoRotation;
                     }
                 }
                 else
                 {
-                    switch(_outputImageOrientation)
+                    switch(strongSelf->_outputImageOrientation)
                     {
-                        case UIInterfaceOrientationPortrait:internalRotation = kGPUImageRotateRight; break;
-                        case UIInterfaceOrientationPortraitUpsideDown:internalRotation = kGPUImageRotateLeft; break;
-                        case UIInterfaceOrientationLandscapeLeft:internalRotation = kGPUImageRotate180; break;
-                        case UIInterfaceOrientationLandscapeRight:internalRotation = kGPUImageNoRotation; break;
-                        default:internalRotation = kGPUImageNoRotation;
+                        case UIInterfaceOrientationPortrait:
+                            strongSelf->internalRotation = kGPUImageRotateRight; break;
+                        case UIInterfaceOrientationPortraitUpsideDown:
+                            strongSelf->internalRotation = kGPUImageRotateLeft; break;
+                        case UIInterfaceOrientationLandscapeLeft:
+                            strongSelf->internalRotation = kGPUImageRotate180; break;
+                        case UIInterfaceOrientationLandscapeRight:
+                            strongSelf->internalRotation = kGPUImageNoRotation; break;
+                        default:
+                            strongSelf->internalRotation = kGPUImageNoRotation;
                     }
                 }
             }
             else
             {
-                if (_horizontallyMirrorFrontFacingCamera)
+                if (strongSelf->_horizontallyMirrorFrontFacingCamera)
                 {
-                    switch(_outputImageOrientation)
+                    switch(strongSelf->_outputImageOrientation)
                     {
-                        case UIInterfaceOrientationPortrait:internalRotation = kGPUImageRotateRightFlipVertical; break;
-                        case UIInterfaceOrientationPortraitUpsideDown:internalRotation = kGPUImageRotateRightFlipHorizontal; break;
-                        case UIInterfaceOrientationLandscapeLeft:internalRotation = kGPUImageFlipHorizonal; break;
-                        case UIInterfaceOrientationLandscapeRight:internalRotation = kGPUImageFlipVertical; break;
-                        default:internalRotation = kGPUImageNoRotation;
+                        case UIInterfaceOrientationPortrait:
+                            strongSelf->internalRotation = kGPUImageRotateRightFlipVertical; break;
+                        case UIInterfaceOrientationPortraitUpsideDown:
+                            strongSelf->internalRotation = kGPUImageRotateRightFlipHorizontal; break;
+                        case UIInterfaceOrientationLandscapeLeft:
+                            strongSelf->internalRotation = kGPUImageFlipHorizonal; break;
+                        case UIInterfaceOrientationLandscapeRight:
+                            strongSelf->internalRotation = kGPUImageFlipVertical; break;
+                        default:
+                            strongSelf->internalRotation = kGPUImageNoRotation;
                    }
                 }
                 else
                 {
-                    switch(_outputImageOrientation)
+                    switch(strongSelf->_outputImageOrientation)
                     {
-                        case UIInterfaceOrientationPortrait:internalRotation = kGPUImageRotateRight; break;
-                        case UIInterfaceOrientationPortraitUpsideDown:internalRotation = kGPUImageRotateLeft; break;
-                        case UIInterfaceOrientationLandscapeLeft:internalRotation = kGPUImageNoRotation; break;
-                        case UIInterfaceOrientationLandscapeRight:internalRotation = kGPUImageRotate180; break;
-                        default:internalRotation = kGPUImageNoRotation;
+                        case UIInterfaceOrientationPortrait:
+                            strongSelf->internalRotation = kGPUImageRotateRight; break;
+                        case UIInterfaceOrientationPortraitUpsideDown:
+                            strongSelf->internalRotation = kGPUImageRotateLeft; break;
+                        case UIInterfaceOrientationLandscapeLeft:
+                            strongSelf->internalRotation = kGPUImageNoRotation; break;
+                        case UIInterfaceOrientationLandscapeRight:
+                            strongSelf->internalRotation = kGPUImageRotate180; break;
+                        default:
+                            strongSelf->internalRotation = kGPUImageNoRotation;
                     }
                 }
             }
@@ -1000,45 +1029,45 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         else
         {
 #if HANDLE_ORIENTATION_WITH_AV_CONNECTION
-            self.videoCaptureConnection.videoOrientation = self.actualVideoOrientation;
+            weakSelf.videoCaptureConnection.videoOrientation = weakSelf.actualVideoOrientation;
             
-            if ([self cameraPosition] == AVCaptureDevicePositionBack) {
+            if ([weakSelf cameraPosition] == AVCaptureDevicePositionBack) {
                 // Rear camera won't mirror.
                 
-                switch (self.actualVideoOrientation) {
+                switch (weakSelf.actualVideoOrientation) {
                     case UIInterfaceOrientationPortrait: {
-                        outputRotation = kGPUImageNoRotation;
+                        strongSelf->outputRotation = kGPUImageNoRotation;
                         break;
                     }
                     case UIInterfaceOrientationPortraitUpsideDown: {
-                        outputRotation = kGPUImageFlipVertical;
+                        strongSelf->outputRotation = kGPUImageFlipVertical;
                         break;
                     }
                     case UIInterfaceOrientationLandscapeLeft: {
-                        outputRotation = kGPUImageRotateLeft;
+                        strongSelf->outputRotation = kGPUImageRotateLeft;
                         break;
                     }
                     case UIInterfaceOrientationLandscapeRight: {
-                        outputRotation = kGPUImageRotateRight;
+                        strongSelf->outputRotation = kGPUImageRotateRight;
                         break;
                     }
                 }
             } else { // Front camera.
-                switch (self.actualVideoOrientation) {
+                switch (weakSelf.actualVideoOrientation) {
                     case UIInterfaceOrientationPortrait: {
-                        outputRotation = self.horizontallyMirrorFrontFacingCamera ? kGPUImageFlipHorizonal : kGPUImageNoRotation;
+                        strongSelf->outputRotation = weakSelf.horizontallyMirrorFrontFacingCamera ? kGPUImageFlipHorizonal : kGPUImageNoRotation;
                         break;
                     }
                     case UIInterfaceOrientationPortraitUpsideDown: {
-                        outputRotation = kGPUImageFlipVertical;
+                        strongSelf->outputRotation = kGPUImageFlipVertical;
                         break;
                     }
                     case UIInterfaceOrientationLandscapeLeft: {
-                        outputRotation = kGPUImageRotateRightFlipVertical;
+                        strongSelf->outputRotation = kGPUImageRotateRightFlipVertical;
                         break;
                     }
                     case UIInterfaceOrientationLandscapeRight: {
-                        outputRotation = kGPUImageRotateRightFlipHorizontal;
+                        strongSelf->outputRotation = kGPUImageRotateRightFlipHorizontal;
                         break;
                     }
                 }
@@ -1097,10 +1126,10 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 #endif
         }
         
-        for (id<GPUImageInput> currentTarget in targets)
+        for (id<GPUImageInput> currentTarget in strongSelf->targets)
         {
-            NSInteger indexOfObject = [targets indexOfObject:currentTarget];
-            [currentTarget setInputRotation:outputRotation atIndex:[[targetTextureIndices objectAtIndex:indexOfObject] integerValue]];
+            NSInteger indexOfObject = [strongSelf->targets indexOfObject:currentTarget];
+            [currentTarget setInputRotation:strongSelf->outputRotation atIndex:[[strongSelf->targetTextureIndices objectAtIndex:indexOfObject] integerValue]];
         }
     });
 }

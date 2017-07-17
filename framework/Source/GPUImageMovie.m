@@ -98,41 +98,46 @@
 {
     if ([GPUImageContext supportsFastTextureUpload])
     {
+        __weak typeof(self) weakSelf = self;
+        
         runSynchronouslyOnVideoProcessingQueue(^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf == nil) { return; }
+            
             [GPUImageContext useImageProcessingContext];
 
-            _preferredConversion = kColorConversion709;
-            isFullYUVRange       = YES;
-            yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImageYUVFullRangeConversionForLAFragmentShaderString];
+            strongSelf->_preferredConversion = kColorConversion709;
+            strongSelf->isFullYUVRange       = YES;
+            strongSelf->yuvConversionProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImageYUVFullRangeConversionForLAFragmentShaderString];
 
-            if (!yuvConversionProgram.initialized)
+            if (!strongSelf->yuvConversionProgram.initialized)
             {
-                [yuvConversionProgram addAttribute:@"position"];
-                [yuvConversionProgram addAttribute:@"inputTextureCoordinate"];
+                [strongSelf->yuvConversionProgram addAttribute:@"position"];
+                [strongSelf->yuvConversionProgram addAttribute:@"inputTextureCoordinate"];
 
-                if (![yuvConversionProgram link])
+                if (![strongSelf->yuvConversionProgram link])
                 {
-                    NSString *progLog = [yuvConversionProgram programLog];
+                    NSString *progLog = [strongSelf->yuvConversionProgram programLog];
                     NSLog(@"Program link log: %@", progLog);
-                    NSString *fragLog = [yuvConversionProgram fragmentShaderLog];
+                    NSString *fragLog = [strongSelf->yuvConversionProgram fragmentShaderLog];
                     NSLog(@"Fragment shader compile log: %@", fragLog);
-                    NSString *vertLog = [yuvConversionProgram vertexShaderLog];
+                    NSString *vertLog = [strongSelf->yuvConversionProgram vertexShaderLog];
                     NSLog(@"Vertex shader compile log: %@", vertLog);
-                    yuvConversionProgram = nil;
+                    strongSelf->yuvConversionProgram = nil;
                     NSAssert(NO, @"Filter shader link failed");
                 }
             }
 
-            yuvConversionPositionAttribute = [yuvConversionProgram attributeIndex:@"position"];
-            yuvConversionTextureCoordinateAttribute = [yuvConversionProgram attributeIndex:@"inputTextureCoordinate"];
-            yuvConversionLuminanceTextureUniform = [yuvConversionProgram uniformIndex:@"luminanceTexture"];
-            yuvConversionChrominanceTextureUniform = [yuvConversionProgram uniformIndex:@"chrominanceTexture"];
-            yuvConversionMatrixUniform = [yuvConversionProgram uniformIndex:@"colorConversionMatrix"];
+            strongSelf->yuvConversionPositionAttribute = [strongSelf->yuvConversionProgram attributeIndex:@"position"];
+            strongSelf->yuvConversionTextureCoordinateAttribute = [strongSelf->yuvConversionProgram attributeIndex:@"inputTextureCoordinate"];
+            strongSelf->yuvConversionLuminanceTextureUniform = [strongSelf->yuvConversionProgram uniformIndex:@"luminanceTexture"];
+            strongSelf->yuvConversionChrominanceTextureUniform = [strongSelf->yuvConversionProgram uniformIndex:@"chrominanceTexture"];
+            strongSelf->yuvConversionMatrixUniform = [strongSelf->yuvConversionProgram uniformIndex:@"colorConversionMatrix"];
 
-            [GPUImageContext setActiveShaderProgram:yuvConversionProgram];
+            [GPUImageContext setActiveShaderProgram:strongSelf->yuvConversionProgram];
 
-            glEnableVertexAttribArray(yuvConversionPositionAttribute);
-            glEnableVertexAttribArray(yuvConversionTextureCoordinateAttribute);
+            glEnableVertexAttribArray(strongSelf->yuvConversionPositionAttribute);
+            glEnableVertexAttribArray(strongSelf->yuvConversionTextureCoordinateAttribute);
         });
     }
 }
@@ -314,12 +319,15 @@
 
 - (void)processPlayerItem
 {
+    __weak typeof(self) weakSelf = self;
     runSynchronouslyOnVideoProcessingQueue(^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
         
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
-        displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
-        [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
-        [displayLink setPaused:YES];
+        strongSelf->displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(displayLinkCallback:)];
+        [strongSelf->displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
+        [strongSelf->displayLink setPaused:YES];
 #else
         // Suggested implementation: use CVDisplayLink http://stackoverflow.com/questions/14158743/alternative-of-cadisplaylink-for-mac-os-x
         CGDirectDisplayID   displayID = CGMainDisplayID();
@@ -342,11 +350,11 @@
         else {
             [pixBuffAttributes setObject:@(kCVPixelFormatType_32BGRA) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
         }
-        playerItemOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:pixBuffAttributes];
-        [playerItemOutput setDelegate:self queue:videoProcessingQueue];
+        strongSelf->playerItemOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:pixBuffAttributes];
+        [strongSelf->playerItemOutput setDelegate:self queue:videoProcessingQueue];
 
-        [_playerItem addOutput:playerItemOutput];
-        [playerItemOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:0.1];
+        [strongSelf->_playerItem addOutput:strongSelf->playerItemOutput];
+        [strongSelf->playerItemOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:0.1];
     });
 }
 

@@ -124,11 +124,15 @@ NSString *const kGPUImageSobelEdgeDetectionFragmentShaderString = SHADER_STRING
         _texelWidth = 1.0 / filterFrameSize.width;
         _texelHeight = 1.0 / filterFrameSize.height;
         
+        __weak typeof(self) weakSelf = self;
         runSynchronouslyOnVideoProcessingQueue(^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (strongSelf == nil) { return; }
+            
             GLProgram *previousProgram = [GPUImageContext sharedImageProcessingContext].currentShaderProgram;
-            [GPUImageContext setActiveShaderProgram:secondFilterProgram];
-            glUniform1f(texelWidthUniform, _texelWidth);
-            glUniform1f(texelHeightUniform, _texelHeight);
+            [GPUImageContext setActiveShaderProgram:strongSelf->secondFilterProgram];
+            glUniform1f(strongSelf->texelWidthUniform, strongSelf->_texelWidth);
+            glUniform1f(strongSelf->texelHeightUniform, strongSelf->_texelHeight);
             [GPUImageContext setActiveShaderProgram:previousProgram];
         });
     }

@@ -56,12 +56,16 @@ NSString *const kGPUImageFourInputTextureVertexShaderString = SHADER_STRING
     
     fourthFrameTime = kCMTimeInvalid;
     
+    __weak typeof(self) weakSelf = self;
     runSynchronouslyOnVideoProcessingQueue(^{
-        [GPUImageContext useImageProcessingContext];
-        filterFourthTextureCoordinateAttribute = [filterProgram attributeIndex:@"inputTextureCoordinate4"];
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) { return; }
         
-        filterInputTextureUniform4 = [filterProgram uniformIndex:@"inputImageTexture4"]; // This does assume a name of "inputImageTexture3" for the third input texture in the fragment shader
-        glEnableVertexAttribArray(filterFourthTextureCoordinateAttribute);
+        [GPUImageContext useImageProcessingContext];
+        strongSelf->filterFourthTextureCoordinateAttribute = [strongSelf->filterProgram attributeIndex:@"inputTextureCoordinate4"];
+        
+        strongSelf->filterInputTextureUniform4 = [strongSelf->filterProgram uniformIndex:@"inputImageTexture4"]; // This does assume a name of "inputImageTexture3" for the third input texture in the fragment shader
+        glEnableVertexAttribArray(strongSelf->filterFourthTextureCoordinateAttribute);
     });
     
     return self;
