@@ -249,6 +249,8 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     
     [self removeInputsAndOutputs];
     
+    dispatch_semaphore_signal(frameRenderingSemaphore);
+    
 // ARC forbids explicit message send of 'release'; since iOS 6 even for dispatch_release() calls: stripping it out in that case is required.
 #if !OS_OBJECT_USE_OBJC
     if (frameRenderingSemaphore != NULL)

@@ -273,24 +273,19 @@ void reportAvailableMemoryForGPUImage(NSString *tag)
 {
     cachedMaximumOutputSize = CGSizeZero;
     
-    __weak typeof(self) weakSelf = self;
-    runSynchronouslyOnVideoProcessingQueue(^{
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (strongSelf == nil) { return; }
+    for (id<GPUImageInput> targetToRemove in targets)
+    {
+        NSInteger indexOfObject = [targets indexOfObject:targetToRemove];
+        if (indexOfObject == NSNotFound) { return; }
+        NSInteger textureIndexOfTarget = [[targetTextureIndices objectAtIndex:indexOfObject] integerValue];
         
-        for (id<GPUImageInput> targetToRemove in strongSelf->targets)
-        {
-            NSInteger indexOfObject = [strongSelf->targets indexOfObject:targetToRemove];
-            NSInteger textureIndexOfTarget = [[strongSelf->targetTextureIndices objectAtIndex:indexOfObject] integerValue];
-            
-            [targetToRemove setInputSize:CGSizeZero atIndex:textureIndexOfTarget];
-            [targetToRemove setInputRotation:kGPUImageNoRotation atIndex:textureIndexOfTarget];
-        }
-        [strongSelf->targets removeAllObjects];
-        [strongSelf->targetTextureIndices removeAllObjects];
-        
-        strongSelf->allTargetsWantMonochromeData = YES;
-    });
+        [targetToRemove setInputSize:CGSizeZero atIndex:textureIndexOfTarget];
+        [targetToRemove setInputRotation:kGPUImageNoRotation atIndex:textureIndexOfTarget];
+    }
+    [targets removeAllObjects];
+    [targetTextureIndices removeAllObjects];
+    
+    allTargetsWantMonochromeData = YES;
 }
 
 #pragma mark -
