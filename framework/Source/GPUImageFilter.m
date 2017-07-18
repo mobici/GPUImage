@@ -341,8 +341,10 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
     }
     
     // Get all targets the framebuffer so they can grab a lock on it
-    for (id<GPUImageInput> currentTarget in targets)
-    {
+    for (NSInteger index = 0; index < targets.count; index++) {
+        if (index >= targets.count) { return; }
+        id<GPUImageInput> currentTarget = [targets objectAtIndex:index];
+        
         if (currentTarget != self.targetToIgnoreForUpdates)
         {
             NSInteger indexOfObject = [targets indexOfObject:currentTarget];
@@ -366,8 +368,10 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
     }    
     
     // Trigger processing last, so that our unlock comes first in serial execution, avoiding the need for a callback
-    for (id<GPUImageInput> currentTarget in targets)
-    {
+    for (NSInteger index = 0; index < targets.count; index++) {
+        if (index >= targets.count) { return; }
+        id<GPUImageInput> currentTarget = [targets objectAtIndex:index];
+        
         if (currentTarget != self.targetToIgnoreForUpdates)
         {
             NSInteger indexOfObject = [targets indexOfObject:currentTarget];

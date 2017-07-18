@@ -569,8 +569,10 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 - (void)updateTargetsForVideoCameraUsingCacheTextureAtWidth:(int)bufferWidth height:(int)bufferHeight time:(CMTime)currentTime;
 {
     // First, update all the framebuffers in the targets
-    for (id<GPUImageInput> currentTarget in targets)
-    {
+    for (NSInteger index = 0; index < targets.count; index++) {
+        if (index >= targets.count) { return; }
+        id<GPUImageInput> currentTarget = [targets objectAtIndex:index];
+        
         if ([currentTarget enabled])
         {
             NSInteger indexOfObject = [targets indexOfObject:currentTarget];
@@ -606,11 +608,14 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     outputFramebuffer = nil;
     
     // Finally, trigger rendering as needed
-    for (id<GPUImageInput> currentTarget in targets)
-    {
+    for (NSInteger index = 0; index < targets.count; index++) {
+        if (index >= targets.count) { return; }
+        id<GPUImageInput> currentTarget = [targets objectAtIndex:index];
+        
         if ([currentTarget enabled])
         {
             NSInteger indexOfObject = [targets indexOfObject:currentTarget];
+            if (indexOfObject == NSNotFound) { continue; }
             NSInteger textureIndexOfTarget = [[targetTextureIndices objectAtIndex:indexOfObject] integerValue];
             
             if (currentTarget != self.targetToIgnoreForUpdates)

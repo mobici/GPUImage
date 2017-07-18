@@ -417,9 +417,10 @@ static CVReturn renderCallback(CVDisplayLinkRef displayLink,
         
         if ([strongSelf->playerItemOutput hasNewPixelBufferForItemTime:outputItemTime]) {
             CVPixelBufferRef pixelBuffer = [strongSelf->playerItemOutput copyPixelBufferForItemTime:outputItemTime itemTimeForDisplay:NULL];
-            if( pixelBuffer )
+            if(pixelBuffer) {
                 [weakSelf processMovieFrame:pixelBuffer withSampleTime:outputItemTime];
-            CFRelease(pixelBuffer);
+                CFRelease(pixelBuffer);
+            }
         }
     });
 }
